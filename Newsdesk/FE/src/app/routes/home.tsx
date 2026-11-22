@@ -3,6 +3,8 @@ import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import { DevWatch, LeadStory, QuickBrief, SectionBlock } from "@/features/news/components/front-page";
 import { ErrorState, ListSkeleton } from "@/features/news/components/states";
+import { useDigest } from "@/features/digest/hooks/use-digest";
+import type { DigestItem } from "@/features/digest/types";
 import { useArticles } from "@/features/news/hooks/use-articles";
 import { sections, type Section } from "@/features/news/lib/sections";
 import { NewsTopic } from "@/features/news/types";
@@ -29,6 +31,15 @@ export function HomePage() {
   useEffect(() => {
     document.title = "Newsdesk – Tin AI, lập trình và nghề dev, quan trọng nhất lên đầu";
   }, []);
+
+  // Bản tin hôm nay (AI tóm tắt): bài nào có tóm tắt thì trang nhất dùng ý chính của AI thay cho câu đầu của feed.
+  const digest = useDigest();
+  const aiById = useMemo(() => {
+    const map: Record<string, DigestItem> = {};
+    if (digest.status === "ready") for (const item of digest.digest.items) if (item.tldr) map[item.articleId] = item;
+    return map;
+  }, [digest]);
+  const digestTotal = digest.status === "ready" ? digest.digest.total : 0;
 
   const shown = top.status === "ready" ? new Set(top.data.items.map((a) => a.id)) : new Set<string>();
   const devItems = dev.status === "ready" ? dev.data.items.filter((a) => !shown.has(a.id)).slice(0, 2) : [];
@@ -58,11 +69,11 @@ export function HomePage() {
           ) : (
             <>
               <div className="lg:col-start-1 lg:row-start-1">
-                <LeadStory article={top.data.items[0]} />
+                <LeadStory article={top.data.items[0]} ai={aiById[top.data.items[0].id]} />
               </div>
               {/* Điểm nhanh cao hơn bài đầu, nên chiếm cả hai hàng bên phải; "Ảnh hưởng nghề dev" lấp chỗ trống dưới bài đầu. */}
               <div className="lg:col-start-2 lg:row-span-2 lg:row-start-1">
-                <QuickBrief articles={top.data.items.slice(1)} />
+                <QuickBrief articles={top.data.items.slice(1)} aiById={aiById} digestTotal={digestTotal} />
               </div>
               {devItems.length > 0 && (
                 <div className="lg:col-start-1 lg:row-start-2">

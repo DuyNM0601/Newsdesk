@@ -105,6 +105,12 @@ export function SectionNav() {
           <NavLink to="/" end className={navLink}>
             Trang nhất
           </NavLink>
+          <NavLink to="/ban-tin" className={navLink}>
+            Bản tin
+          </NavLink>
+          <NavLink to="/github" className={navLink}>
+            GitHub
+          </NavLink>
           {sections.map((s) => {
             const warm = () => prefetchArticles({ ...sectionQuery(s), page: 1 });
             return (

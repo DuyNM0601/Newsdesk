@@ -13,6 +13,12 @@ namespace Newsdesk.Application.Common
 
         DbSet<Article> Articles { get; }
 
+        DbSet<ArticleSummary> ArticleSummaries { get; }
+
+        DbSet<DigestEntry> DigestEntries { get; }
+
+        DbSet<Repo> Repos { get; }
+
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
     }
 }

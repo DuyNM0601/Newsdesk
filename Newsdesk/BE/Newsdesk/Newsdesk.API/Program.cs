@@ -5,7 +5,9 @@ using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using Newsdesk.API;
 using Newsdesk.API.Features.Auth;
+using Newsdesk.API.Features.Digest;
 using Newsdesk.API.Features.News;
+using Newsdesk.API.Features.Repos;
 using Newsdesk.Application;
 using Newsdesk.Infrastructure;
 using Newsdesk.Infrastructure.Auth;
@@ -74,5 +76,7 @@ app.UseAuthorization();
 
 app.MapAuthApi();
 app.MapNewsApi();
+app.MapDigestApi();
+app.MapRepoApi();
 
 app.Run();

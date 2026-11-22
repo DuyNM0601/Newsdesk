@@ -4,6 +4,8 @@ import { cn } from "@/lib/utils";
 import { firstSentence, reasonLine } from "../lib/format";
 import type { Section } from "../lib/sections";
 import { IMPORTANT_THRESHOLD, NewsCategory, NewsTopic, VERY_IMPORTANT_THRESHOLD, type Article, type NewsTopicValue } from "../types";
+import { AiLabel, KeyPointList } from "@/features/digest/components/ai-bits";
+import type { DigestItem } from "@/features/digest/types";
 import { ArticleLink, Meta, PriorityMark, Thumb, TopicChips } from "./article-bits";
 
 /**
@@ -11,9 +13,10 @@ import { ArticleLink, Meta, PriorityMark, Thumb, TopicChips } from "./article-bi
  * câu đầu → "vì sao đáng đọc" (khung nền màu nhấn) → nút đọc bài gốc → ảnh. Ảnh để cuối vì nó ngẫu nhiên theo feed,
  * không được chiếm chỗ của tiêu đề.
  */
-export function LeadStory({ article }: { article: Article }) {
-  const lede = firstSentence(article.summary, 260);
-  const reason = reasonLine(article);
+export function LeadStory({ article, ai }: { article: Article; ai?: DigestItem }) {
+  // Có bản tóm tắt AI thì dùng ý chính + các gạch đầu dòng + "vì sao đáng đọc" của AI; chưa có thì dùng câu đầu của feed.
+  const lede = ai?.tldr ?? firstSentence(article.summary, 260);
+  const reason = ai?.whyItMatters || reasonLine(article);
   return (
     <article className="ink-rise flex flex-col gap-5" style={{ "--i": 0 } as React.CSSProperties}>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
@@ -24,6 +27,7 @@ export function LeadStory({ article }: { article: Article }) {
         <ArticleLink article={article} />
       </h2>
       {lede && <p className="max-w-[60ch] text-xl leading-relaxed text-foreground/90">{lede}</p>}
+      {ai && ai.keyPoints.length > 0 && <KeyPointList points={ai.keyPoints} className="max-w-[60ch] text-lg text-foreground/90" />}
       {reason && (
         <p className="max-w-[60ch] rounded-md bg-accent px-4 py-3 text-base font-semibold leading-snug text-accent-foreground">
           Vì sao đáng đọc: {reason}
@@ -42,6 +46,7 @@ export function LeadStory({ article }: { article: Article }) {
         </a>
         <Meta article={article} />
       </div>
+      {ai?.tldr && <AiLabel language={ai.language} />}
       <Thumb article={article} className="mt-1 aspect-[2/1] w-full" />
     </article>
   );
@@ -51,7 +56,20 @@ export function LeadStory({ article }: { article: Article }) {
  * "Điểm nhanh": các tin đáng đọc tiếp theo, xếp theo mức quan trọng giảm dần. Là điểm nhìn thứ hai: hộp nền riêng, số thứ hạng
  * lớn màu nhấn (số mang thông tin, tiếp nối bài đầu trang), tin đầu to hơn. Ghi rõ xếp hạng bằng từ khoá, không phải AI.
  */
-export function QuickBrief({ articles, startRank = 2 }: { articles: Article[]; startRank?: number }) {
+export function QuickBrief({
+  articles,
+  startRank = 2,
+  aiById = {},
+  digestTotal = 0,
+}: {
+  articles: Article[];
+  startRank?: number;
+  /** Bản tóm tắt AI theo id bài (từ bản tin hôm nay), nếu có. */
+  aiById?: Record<string, DigestItem>;
+  /** Số tin trong bản tin hôm nay; > 0 thì hiện nút sang trang bản tin. */
+  digestTotal?: number;
+}) {
+  const hasAi = articles.some((a) => aiById[a.id]?.tldr);
   return (
     <section aria-labelledby="quick-brief" className="ink-rise border-t-4 border-rule bg-muted p-5 lg:p-6" style={{ "--i": 2 } as React.CSSProperties}>
       <h2 id="quick-brief" className="text-2xl font-bold">
@@ -60,7 +78,7 @@ export function QuickBrief({ articles, startRank = 2 }: { articles: Article[]; s
       <p className="mt-1 text-sm text-muted-foreground">Tiếp theo bài đầu trang, quan trọng nhất ở trên.</p>
       <ol className="mt-4 divide-y divide-foreground/15">
         {articles.map((a, i) => {
-          const lede = firstSentence(a.summary, 130);
+          const lede = aiById[a.id]?.tldr ?? firstSentence(a.summary, 130);
           const first = i === 0;
           return (
             <li key={a.id} className="flex gap-4 py-4">
@@ -81,8 +99,18 @@ export function QuickBrief({ articles, startRank = 2 }: { articles: Article[]; s
           );
         })}
       </ol>
-      <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-        Xếp hạng bằng từ khoá, ưu tiên AI, lập trình và tin ảnh hưởng nghề dev. Chưa phải AI đánh giá.
+      {digestTotal > 0 && (
+        <Link
+          to="/ban-tin"
+          className="mt-3 flex min-h-12 items-center justify-between gap-2 rounded-md bg-foreground px-4 text-sm font-semibold text-background transition-[opacity,transform] duration-150 ease-(--ease-out) hover:opacity-90 active:scale-[0.98]"
+        >
+          Xem bản tin hôm nay ({digestTotal} tin)
+          <ArrowRightIcon className="size-4" aria-hidden="true" />
+        </Link>
+      )}
+      <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+        Xếp hạng bằng từ khoá, ưu tiên AI, lập trình và tin ảnh hưởng nghề dev.
+        {hasAi ? " Ý chính do AI tóm tắt, có thể sai; hãy đọc bài gốc để biết chi tiết." : " Chưa phải AI đánh giá."}
       </p>
     </section>
   );

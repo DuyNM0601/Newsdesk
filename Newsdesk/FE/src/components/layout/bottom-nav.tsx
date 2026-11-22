@@ -1,9 +1,10 @@
 import { NavLink } from "react-router-dom";
-import { BriefcaseIcon, NewspaperIcon, SearchIcon, SparklesIcon } from "lucide-react";
+import { BriefcaseIcon, ListChecksIcon, NewspaperIcon, SearchIcon, SparklesIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const items = [
   { to: "/", label: "Trang nhất", icon: NewspaperIcon, end: true },
+  { to: "/ban-tin", label: "Bản tin", icon: ListChecksIcon, end: false },
   { to: "/muc/ai", label: "AI", icon: SparklesIcon, end: false },
   { to: "/muc/nghe-dev", label: "Nghề dev", icon: BriefcaseIcon, end: false },
   { to: "/muc/tat-ca", label: "Tìm", icon: SearchIcon, end: false },

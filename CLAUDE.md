@@ -11,10 +11,10 @@ Người dùng nói chuyện bằng tiếng Việt. Trả lời, comment giải 
 
 ### Lộ trình (giai đoạn)
 
-Đã xong: **0** dọn dẹp, **2** tin tức (entity `Source`/`Article`, tải RSS bằng cron, `GET /news`, `GET /sources`), đổi tên sang Newsdesk, **5** FE tin tức hướng "Báo in hiện đại" (trang nhất xếp theo độ quan trọng, trang mục + tìm kiếm), xếp hạng bằng từ khoá (`Article.Priority`/`Topics`).
-Còn lại, theo thứ tự: **3** RabbitMQ (queue tải feed + retry + dead-letter), **4** Redis cache + rate limiting, **6** AI tóm tắt (thay luật từ khoá bằng điểm AI chấm), **7** khoá học + trang Khoá học, **8** Docker + Nginx (+ tách Worker, CI), `User.Role` + endpoint quản trị nguồn.
+Đã xong: **GitHub đang lên** (repo mới nhiều sao + AI tóm tắt, xem mục "GitHub đang lên"), **6** AI tóm tắt + bản tin hằng ngày (xem mục "AI tóm tắt và bản tin"), **0** dọn dẹp, **2** tin tức (entity `Source`/`Article`, tải RSS bằng cron, `GET /news`, `GET /sources`), đổi tên sang Newsdesk, **5** FE tin tức hướng "Báo in hiện đại" (trang nhất xếp theo độ quan trọng, trang mục + tìm kiếm), xếp hạng bằng từ khoá (`Article.Priority`/`Topics`).
+Còn lại, theo thứ tự: **3** RabbitMQ (queue tải feed + retry + dead-letter), **4** Redis cache + rate limiting, **7** khoá học + trang Khoá học, **8** Docker + Nginx (+ tách Worker, CI), `User.Role` + endpoint quản trị nguồn.
 
-AI tóm tắt (giai đoạn 6): chạy NỀN theo lô lúc nạp tin, lưu vào DB (`ArticleSummary`), **không bao giờ gọi AI trong request của người đọc**. Interface `IArticleSummarizer` ở Application; chọn nhà cung cấp bằng `Ai:Provider` = `Ollama` (chạy local, GPU 8GB, model ~7-8B, mặc định tóm tắt tiếng Anh) hoặc `Claude` (API, trả tiền). Có ngân sách token mỗi ngày, nội dung bài là dữ liệu không tin cậy (không cấp tool cho model, kiểm đầu ra theo schema, FE hiển thị dạng text), kèm nhãn "AI tóm tắt, có thể sai".
+AI tóm tắt chạy NỀN bằng cron, lưu vào DB, **không bao giờ gọi AI trong request của người đọc**. Xem mục "AI tóm tắt và bản tin" ở mục 3.
 
 ## 2. Công nghệ
 
@@ -36,9 +36,9 @@ AI tóm tắt (giai đoạn 6): chạy NỀN theo lô lúc nạp tin, lưu vào 
 Newsdesk/BE/Newsdesk/
   Newsdesk.slnx
   Newsdesk.Domain/
-    Entities/BaseEntity, IAuditable, ISoftDelete, User, RefreshToken, Source, Article (+NewsTopic), CronJob   # không biết EF Core
+    Entities/BaseEntity, IAuditable, ISoftDelete, User, RefreshToken, Source, Article (+NewsTopic), ArticleSummary, DigestEntry, Repo (+RepoKind), CronJob   # không biết EF Core
   Newsdesk.Application/
-    Common/IAppDbContext, ITokenService, IGoogleTokenVerifier, ICurrentUser, ICronJob(+[CronSchedule]), IFeedFetcher
+    Common/IAppDbContext, ITokenService, IGoogleTokenVerifier, ICurrentUser, ICronJob(+[CronSchedule]), IFeedFetcher, IArticleSummarizer, IGitHubClient
     Shared/Result.cs           # Result<T>, Error(ErrorType, Code, Message) — thuần, KHÔNG tham chiếu IResult (ASP.NET Core)
     Shared/Cqrs.cs             # ICommand<T>/IQuery<T>, CommandHandler<,>/QueryHandler<,> (HandleAsync public abstract, Ok/Fail)
     Features/Auth/             # GoogleLogin, RefreshToken, Logout; Models/AuthModel.cs; AuthIssuer.cs
@@ -46,18 +46,27 @@ Newsdesk/BE/Newsdesk/
       Commands/FetchSourceCommand (tải 1 nguồn), FetchAllFeedsCommand (tải mọi nguồn Active, nhịp của cron)
       Queries/ListArticlesQuery (lọc category/topic/important, tìm trong tiêu đề, sort new|top, phân trang), ListSourcesQuery
       Models/NewsModels.cs, NewsRules.cs (chuẩn hoá link, SHA-256 UrlHash, giới hạn, Classify = chấm độ quan trọng bằng từ khoá)
+    Features/Digest/
+      Commands/BuildDailyDigestCommand (chọn ~50 bài/ngày), SummarizePendingCommand (AI tóm tắt dần)
+      Queries/GetDigestQuery, ListDigestDatesQuery; Models/DigestModel + DigestItemModel; DigestRules.cs (50 bài, hạn ngạch mục, trần mỗi nguồn)
+    Features/Repos/
+      Commands/FetchTrendingReposCommand (chọn ~12 repo/ngày), SummarizePendingReposCommand; Queries/ListReposQuery; Models/RepoModel; RepoRules.cs
     DependencyInjections.cs    # AddApplication(): AddMediatR
   Newsdesk.Infrastructure/
     Data/AppDbContext.cs : IAppDbContext, SourceSeeder.cs (nạp 16 nguồn RSS lần đầu, chỉ thêm nguồn chưa có)
     Migrations/                # migration nằm ngay đây (hiện có InitNews)
     Auth/JwtOptions, JwtTokenService, GoogleOptions, GoogleTokenVerifier
     News/RssFeedFetcher.cs     # IFeedFetcher: HTTP + XML (RSS 2.0 và Atom)
-    Jobs/CronJobRunner.cs, CronJobRegistry.cs, FetchAllFeedsJob.cs   # bộ chạy chung + job tải tin (15 phút/lần)
+    Ai/AiOptions, OllamaArticleSummarizer (HttpClient, không package; prompt riêng cho bài và cho repo), DisabledArticleSummarizer
+    GitHub/GitHubClient.cs     # IGitHubClient: HttpClient tới api.github.com, không package
+    Jobs/CronJobRunner.cs, CronJobRegistry.cs, FetchAllFeedsJob.cs (15 phút), BuildDailyDigestJob (06:00 VN), FetchTrendingReposJob (05:30 VN), SummarizePendingJob (3 phút, cả bài lẫn repo)
     DependencyInjections.cs    # AddInfrastructure(config)
   Newsdesk.API/
     Shared/ResultHttpExtensions.cs   # ToHttpResult — CHỈ ở đây, vì IResult là kiểu ASP.NET Core
     Shared/CurrentUser.cs            # cài ICurrentUser: đọc claim "sub" từ token
     Features/Auth/AuthEndpoints.cs   # /auth/google, /refresh, /logout, /me
+    Features/Repos/RepoEndpoints.cs   # GET /repos?limit= (công khai)
+    Features/Digest/DigestEndpoints.cs   # GET /digest?date=yyyy-MM-dd, GET /digest/dates (công khai)
     Features/News/NewsEndpoints.cs   # GET /news?category&topic&q&important&sort&page&pageSize, GET /sources (công khai)
     Program.cs
 Newsdesk/FE/   # Vite + React, xem mục 6
@@ -96,6 +105,24 @@ Domain  ←  Application  ←  Infrastructure
 - Chuỗi hằng số (không enum/bool): `NewsCategory` (Tech/Programming/Politics/Economy), `SourceStatus`, `FetchStatus` ở `Domain/Entities/Source.cs`.
 - **Xếp hạng quan trọng (ưu tiên của người đọc: AI, lập trình, tin ảnh hưởng nghề dev)**: `NewsRules.Classify(category, title, summary)` chấm `Article.Priority` 0-100 lúc nạp tin bằng regex từ khoá tiếng Anh: điểm nền theo mục (Programming 30, Tech 25, Economy 10, Politics 5) + AI 25 + Dev 15 + DevImpact 30 (DevImpact cần từ khoá tác động như layoff/licence/CVE/outage VÀ bối cảnh công nghệ). `Article.Topics` lưu dạng `,Ai,DevImpact,` (bọc dấu phẩy để lọc khớp chính xác). `important=true` = Priority ≥ 50; `sort=top` = quan trọng nhất trong 72 giờ gần đây. **Đây là luật từ khoá, bắt sót/nhầm là có (shortcut); FE luôn ghi "chưa phải AI đánh giá". Giai đoạn AI sẽ thay bằng điểm do AI chấm.** Đổi luật phải nạp lại điểm cho bài cũ (chưa có job backfill).
 - Shortcut đã biết: `FetchAllFeedsCommand` tải tuần tự trong tiến trình; hai lần tải song song cùng một nguồn sẽ đụng unique `UrlHash` (khi tách sang RabbitMQ at-least-once phải bắt `DbUpdateException` và coi là "đã có").
+
+### AI tóm tắt và bản tin hằng ngày
+
+- **Luồng**: `BuildDailyDigestJob` mỗi ngày 23:00 UTC (= 06:00 giờ Việt Nam) chọn ~50 bài mới và quan trọng nhất của 24 giờ qua → lưu `DigestEntry` (ngày, hạng, bài; giữ lịch sử để xem lại các ngày). `SummarizePendingJob` mỗi 3 phút tóm tắt dần các bài chưa có tóm tắt (tối đa 12 bài hoặc 150 giây mỗi nhịp để không giữ bộ chạy cron) → lưu `ArticleSummary` (Tldr, KeyPoints JSON, WhyItMatters, Language, Model, PromptVersion, Attempts). Người đọc chỉ đọc bản đã lưu qua `GET /digest`. Khởi động lần đầu chưa có bản tin nào thì `SummarizePendingJob` tạo luôn (khỏi chờ 06:00).
+- **Chọn bài** (`DigestRules`): bài có đoạn trích ≥ 40 ký tự (chỉ có tiêu đề thì model sẽ bịa nên bỏ), chưa nằm trong bản tin nào, điểm `Priority` cao trước; hạn ngạch mục Programming 16 / Tech 16 / Economy 10 / Politics 8 (thiếu bài thì mục khác lấp chỗ), tối đa 8 bài mỗi nguồn. Ngày bản tin tính theo giờ Việt Nam cố định UTC+7 (shortcut).
+- **Đầu vào cho model chỉ là tiêu đề + đoạn trích RSS, KHÔNG phải toàn văn** (bản quyền), nên tóm tắt chỉ viết lại thông tin sẵn có, không thêm chi tiết. Chi tiết thì người đọc bấm link về bài gốc. Nội dung bài là dữ liệu không tin cậy: prompt bọc trong `<article>`, model không có công cụ nào, đầu ra ép theo JSON schema và bị kiểm (rỗng/hỏng thì tính là lần thất bại), FE hiển thị dạng chữ thường + nhãn "Tóm tắt bởi AI, có thể sai".
+- **Lỗi**: model trả hỏng → `Attempts++`, thử lại ở nhịp sau, tối đa 3 lần rồi bỏ (bài vẫn hiện trong bản tin, ghi "AI đang tóm tắt"). Ollama chưa chạy/chưa có model → `SummarizerUnavailableException`: dừng cả lô, KHÔNG tính lần thử, tự tóm tắt khi Ollama bật lên.
+- **Cấu hình** (mục `Ai`, không có bí mật): `Ai:Provider` = `Ollama` (mặc định) | `None` (tắt AI, bản tin vẫn tạo); `Ai:Language` = `en` (mặc định, model nhỏ viết tiếng Anh tốt hơn) | `vi`; `Ai:Ollama:BaseUrl` (mặc định `http://localhost:11434`), `Ai:Ollama:Model` (mặc định `llama3.2:3b`), `Ai:Ollama:TimeoutSeconds`. Sai tên provider/ngôn ngữ thì báo lỗi lúc khởi động. Thêm provider Claude cần package NuGet của Anthropic (hỏi người dùng trước).
+- **Máy dev hiện tại**: GTX 1650 Max-Q chỉ **4 GB VRAM** → dùng model cỡ ~3B (llama3.2:3b, qwen2.5:3b...); 7-8B sẽ tràn VRAM và rất chậm. Ollama phải cài riêng (`ollama pull <model>`); chưa kiểm chất lượng tóm tắt thật trên model thật (mới thử đường đi bằng máy chủ Ollama giả).
+- Shortcut: tóm tắt tuần tự từng bài; khi có RabbitMQ sẽ chuyển thành queue `article.summarize` với retry và dead-letter.
+
+### GitHub đang lên
+
+- **Mục tiêu**: giới thiệu ~12 repo mới tạo trong 14 ngày gần đây mà đã ≥ 100 sao ("đang lên"), repo liên quan AI xếp trước (`RepoRules.KindOf`, luật từ khoá), kèm AI tóm tắt "repo làm gì / dành cho ai" và link sang GitHub. Trang FE `/github`, API `GET /repos`.
+- **Số request tối thiểu (miễn phí)**: `FetchTrendingReposJob` mỗi ngày 22:30 UTC (= 05:30 VN) gọi MỘT request `search/repositories` (`created:>14 ngày stars:>100 sort=stars per_page=100`) rồi một request README cho mỗi repo được chọn (~12). Chỉ lấy trường cần: tên, mô tả, ngôn ngữ, giấy phép (SPDX), chủ đề, số sao, ngày tạo, README. Loại fork, repo lưu trữ/vô hiệu, danh sách `awesome-*`, repo đã giới thiệu, repo không có README hoặc README đã làm sạch < 200 ký tự (không có gì để tóm tắt trung thực).
+- **Token GitHub**: `GitHub:Token` là **tuỳ chọn nhưng nên có**, đặt bằng user-secrets (`dotnet user-secrets set "GitHub:Token" "<token>" --project Newsdesk.API`). Token chỉ-đọc, KHÔNG cần quyền nào (fine-grained token, public repositories). Không token thì hạn mức tìm kiếm tính theo địa chỉ IP (10 request/phút dùng chung với mọi người cùng IP) và thực tế đã bị hết khi thử trên mạng của máy dev; có token là hạn mức riêng. Hết hạn mức/token sai thì job ghi lỗi rõ ràng vào bảng CronJobs, không đoán.
+- **README**: chỉ giữ tạm 2000 ký tự đã làm sạch (bỏ ảnh, huy hiệu, thẻ HTML) trong `Repo.ReadmeExcerpt` để làm đầu vào cho AI và **xoá ngay sau khi tóm tắt thành công**. README là dữ liệu không tin cậy: prompt bọc trong `<repo>`, model không có công cụ, đầu ra ép JSON schema, FE hiển thị dạng chữ thường + nhãn AI.
+- Shortcut: số sao lưu lúc phát hiện, không cập nhật; repo cũ bỗng nổi (không phải repo mới tạo) không được bắt; chưa có snapshot sao theo ngày để tính "+N sao/ngày".
 
 ### Auth: đăng nhập Google + access token + refresh token
 
@@ -140,13 +167,13 @@ dotnet run --project Newsdesk.API --launch-profile https   # https://localhost:7
 **React thuần (Vite + React Router)**, TypeScript, Tailwind v4, thư mục `Newsdesk/FE/`. Hướng thiết kế đã chọn: **"Báo in hiện đại"** (xem `Newsdesk/FE/DESIGN.md` và `PRODUCT.md` ở thư mục gốc). Khi làm/sửa UI **phải dùng các skill/plugin thiết kế** (impeccable, ui-ux-pro-max, emil-design-eng...), không tự viết CSS tuỳ ý; hook của impeccable tự quét file sau mỗi lần sửa.
 
 - Cấu trúc kiểu bulletproof-react: `src/app/` (`app.tsx`, `provider.tsx`, `router.tsx`, `routes/home.tsx`, `routes/section.tsx`), `src/features/news/` (`api/`, `hooks/use-articles.ts`, `components/`, `lib/sections.ts` + `format.ts`, `types.ts`), `src/features/auth/` (đăng nhập Google, `authedRequest`), `src/components/layout/` (`site-header` = `Masthead` + `SectionNav`, `site-footer`, `bottom-nav`), `src/components/ui/` (shadcn, base Radix), `src/lib/api-client.ts`, `src/config/env.ts` (đọc biến môi trường, không đọc `import.meta.env` ở nơi khác). Alias `@/*` → `src/*`.
-- Route: `/` (trang nhất: bài đầu trang = quan trọng nhất, "Điểm nhanh", dải "Ảnh hưởng nghề dev", các khối mục), `/muc/:slug` (slug: `ai`, `lap-trinh`, `nghe-dev`, `cong-nghe`, `kinh-te`, `chinh-tri`, `tat-ca` cho tìm kiếm; bộ lọc `q`, `sort`, `important` nằm trên URL). `/muc/ai` và `/muc/nghe-dev` là chủ đề (`topic`), các mục còn lại là `category`.
+- Route: `/github` (repo GitHub đang lên + tóm tắt AI, mục "GitHub" trên menu), `/ban-tin` và `/ban-tin/:date` (bản tin hằng ngày: ~50 tin, ý chính do AI tóm tắt + link bài gốc, nút ngày trước/sau; trang nhất cũng dùng tóm tắt AI cho bài đầu trang và Điểm nhanh khi có), `/` (trang nhất: bài đầu trang = quan trọng nhất, "Điểm nhanh", dải "Ảnh hưởng nghề dev", các khối mục), `/muc/:slug` (slug: `ai`, `lap-trinh`, `nghe-dev`, `cong-nghe`, `kinh-te`, `chinh-tri`, `tat-ca` cho tìm kiếm; bộ lọc `q`, `sort`, `important` nằm trên URL). `/muc/ai` và `/muc/nghe-dev` là chủ đề (`topic`), các mục còn lại là `category`.
 - Token màu ở `src/index.css` (CSS variable → `@theme inline`), đừng viết mã hex trong component. Font: Literata (tiêu đề tin, class `.headline`) + Be Vietnam Pro (giao diện). Sáng mặc định, tối qua `theme-provider.tsx` (key `newsdesk-theme`), không dùng `next-themes`.
 - Đăng nhập là popup `Dialog` shadcn (`features/auth/components/auth-modal.tsx`); đọc tin KHÔNG cần đăng nhập. Cần `VITE_GOOGLE_CLIENT_ID` trong `.env.local`.
 - `request()` chỉ gửi `Content-Type` khi có body (GET khỏi phải preflight CORS). Base URL API từ `VITE_API_URL` (mặc định `https://localhost:7022`, `.env.local`).
 - Vite chạy cổng 3000 khớp CORS policy `"Fe"` ở BE (đụng cổng FE thì sửa cả 2 chỗ). Nếu cổng 3000 đã bận, Vite tự nhảy cổng khác và mọi lệnh gọi API sẽ bị CORS chặn.
 - Lệnh: `cd Newsdesk/FE && npm run dev` (cổng 3000), `npm run build`, `npm run lint`.
-- Chưa làm: trang Khoá học (không có link chết trên menu), ảnh bài dùng thẳng URL của feed (ảnh lỗi thì ẩn), tóm tắt AI.
+- Chưa làm: trang Khoá học (không có link chết trên menu), ảnh bài dùng thẳng URL của feed (ảnh lỗi thì ẩn).
 
 ## 7. Việc còn thiếu / TODO
 
