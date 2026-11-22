@@ -1,0 +1,275 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Thế giới "báo in hiện đại": giấy báo sáng, mực gần đen, một màu nhấn xanh. Sáng là mặc định (đọc tin ban ngày ở văn phòng),
+   tối cho buổi tối: mực đổi thành nền, giấy đổi thành chữ. Ba "giọng" chủ đề (AI, lập trình, nghề dev) có cặp nền/chữ riêng
+   và luôn đi kèm nhãn chữ, không bao giờ chỉ dựa vào màu. */
+:root {
+  --background: #fbfaf7;
+  --foreground: #15171a;
+  --card: #ffffff;
+  --card-foreground: #15171a;
+  --popover: #ffffff;
+  --popover-foreground: #15171a;
+  --muted: #f1efe9;
+  --muted-foreground: #4a4f57;
+  --secondary: #f1efe9;
+  --secondary-foreground: #15171a;
+  --border: #e3e0d8;
+  --input: #8a8f97;
+  --ring: #1d4ed8;
+  --primary: #1d4ed8;
+  --primary-foreground: #ffffff;
+  --accent: #e8eeff;
+  --accent-foreground: #1d4ed8;
+  --destructive: #b42318;
+  --success: #0f6b4f;
+  --success-bg: #e3f4ec;
+  --warning: #8a4b00;
+  --warning-bg: #fbebcb;
+  --danger: #b42318;
+  --danger-bg: #fbe3df;
+  --rule: #15171a;
+  --tone-ai: #1d4ed8;
+  --tone-ai-bg: #e8eeff;
+  --tone-dev: #0f6b4f;
+  --tone-dev-bg: #e3f4ec;
+  --tone-impact: #9a3412;
+  --tone-impact-bg: #fdebdd;
+  --radius: 0.5rem;
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+}
+
+.dark {
+  --background: #111418;
+  --foreground: #ece9e1;
+  --card: #181c22;
+  --card-foreground: #ece9e1;
+  --popover: #181c22;
+  --popover-foreground: #ece9e1;
+  --muted: #1d222a;
+  --muted-foreground: #a9aeb8;
+  --secondary: #1d222a;
+  --secondary-foreground: #ece9e1;
+  --border: #2a3038;
+  --input: #6b7280;
+  --ring: #8fb0ff;
+  --primary: #8fb0ff;
+  --primary-foreground: #0b1220;
+  --accent: rgba(143, 176, 255, 0.14);
+  --accent-foreground: #8fb0ff;
+  --destructive: #f06f5e;
+  --success: #4fbf6b;
+  --success-bg: rgba(79, 191, 107, 0.14);
+  --warning: #f0a24a;
+  --warning-bg: rgba(240, 162, 74, 0.14);
+  --danger: #f06f5e;
+  --danger-bg: rgba(240, 111, 94, 0.14);
+  --rule: #ece9e1;
+  --tone-ai: #8fb0ff;
+  --tone-ai-bg: rgba(143, 176, 255, 0.14);
+  --tone-dev: #5fd1a2;
+  --tone-dev-bg: rgba(95, 209, 162, 0.14);
+  --tone-impact: #f4a672;
+  --tone-impact-bg: rgba(244, 166, 114, 0.14);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-success-bg: var(--success-bg);
+  --color-warning: var(--warning);
+  --color-warning-bg: var(--warning-bg);
+  --color-danger: var(--danger);
+  --color-danger-bg: var(--danger-bg);
+  --color-rule: var(--rule);
+  --color-tone-ai: var(--tone-ai);
+  --color-tone-ai-bg: var(--tone-ai-bg);
+  --color-tone-dev: var(--tone-dev);
+  --color-tone-dev-bg: var(--tone-dev-bg);
+  --color-tone-impact: var(--tone-impact);
+  --color-tone-impact-bg: var(--tone-impact-bg);
+  --font-sans: "Be Vietnam Pro", system-ui, sans-serif;
+  --font-display: "Literata", Georgia, serif;
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    scrollbar-color: var(--muted-foreground) transparent;
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-background font-sans text-foreground antialiased;
+    font-variant-numeric: tabular-nums;
+  }
+  /* Tiêu đề tin: chữ có chân, cân dòng cho đỡ lẻ chữ cuối. */
+  .headline {
+    font-family: var(--font-display);
+    text-wrap: balance;
+    letter-spacing: -0.01em;
+  }
+  ::selection {
+    background: var(--foreground);
+    color: var(--background);
+  }
+  :focus-visible {
+    outline: 3px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+}
+
+/* Một khoảnh khắc chuyển động có chủ đích: khối đầu trang "in ra" lần lượt khi mở trang (trượt lên nhẹ + hiện dần).
+   Mặc định đã hiện (animation chỉ chạy từ trạng thái ẩn nhờ fill-mode backwards), nên JS lỗi cũng không mất nội dung. */
+@keyframes ink-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+.ink-rise {
+  animation: ink-rise 520ms var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * 70ms);
+}
+
+/* Dòng trong danh sách "vào" lần lượt khi danh sách thay mới (đổi tab): trượt lên 6px + hiện dần, 240ms, trễ 35ms mỗi dòng
+   (--i tối đa 7). Chỉ transform/opacity. Dưới 300ms để đổi tab vẫn thấy nhanh. */
+@keyframes row-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.row-in {
+  animation: row-in 240ms var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * 35ms);
+}
+
+/* Gạch chân tab active: một phần tử 1px rộng, vị trí bằng translateX, bề rộng bằng scaleX (không animate width/left). */
+.nav-bar {
+  transition: transform 260ms var(--ease-in-out);
+  will-change: transform;
+}
+
+.nav-bar[data-instant] {
+  transition: none;
+}
+
+/* Đổi sáng/tối: tắt crossfade mặc định của View Transitions, thay bằng vòng tròn loang ra từ vị trí bấm nút
+   (toạ độ do theme-provider.tsx set qua custom property). */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-old(root) {
+  z-index: 0;
+}
+
+::view-transition-new(root) {
+  z-index: 1;
+  animation: theme-reveal 500ms var(--ease-in-out);
+}
+
+@keyframes theme-reveal {
+  from {
+    clip-path: circle(0px at var(--theme-toggle-x, 50%) var(--theme-toggle-y, 50%));
+  }
+  to {
+    clip-path: circle(var(--theme-toggle-r, 150%) at var(--theme-toggle-x, 50%) var(--theme-toggle-y, 50%));
+  }
+}
+
+@keyframes row-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ink-rise {
+    animation: none;
+  }
+  /* Giảm chuyển động chứ không bỏ hẳn: giữ hiện dần (giúp thấy nội dung đổi), bỏ trượt và bỏ trễ lần lượt. */
+  .row-in {
+    animation: row-fade 160ms ease backwards;
+    animation-delay: 0ms;
+  }
+  .nav-bar {
+    transition: none;
+  }
+  ::view-transition-new(root) {
+    animation: none;
+  }
+  [data-slot="dialog-overlay"],
+  [data-slot="dialog-content"] {
+    animation: none;
+  }
+}

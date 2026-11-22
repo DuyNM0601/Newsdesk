@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="Newsdesk.API/Newsdesk.API.csproj" />
+  <Project Path="Newsdesk.Application/Newsdesk.Application.csproj" />
+  <Project Path="Newsdesk.Domain/Newsdesk.Domain.csproj" />
+  <Project Path="Newsdesk.Infrastructure/Newsdesk.Infrastructure.csproj" />
+</Solution>
